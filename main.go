@@ -19,6 +19,14 @@ func main() {
 		}
 	})
 
+	http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			handlers.GetUser(w, r)
+			return
+		}
+		http.Error(w, "Method not alloed", http.StatusMethodNotAllowed)
+	})
+
 	fmt.Println("Server running on http://localhost:8080")
 
 	err := http.ListenAndServe(":8080", nil)
