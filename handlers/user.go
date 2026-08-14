@@ -1,43 +1,51 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/pariyafesahat/go-rest-api/models"
 )
 
-func GetUsers(conn *pgx.Conn) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		rows, err := conn.Query(context.Background(), "SELECT id, name, email FROM users")
-		if err != nil {
-			http.Error(w, "Failed to get users", http.StatusInternalServerError)
-			return
-		}
-		defer rows.Close()
+var users = []models.User{
+	{
+		Name:  "Alice",
+		Email: "alice@example.com",
+		Age:   22,
+	},
+	{
+		Name:  "Bob",
+		Email: "bob@example.com",
+		Age:   30,
+	},
+}
 
-		var users []models.User
+func GetUsers(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-		for rows.Next() {
-			var user models.User
-
-			err := rows.Scan(
-				&user.ID,
-				&user.Name,
-				&user.Email,
-			)
-			if err != nil {
-				http.Error(w, "Failed to read user", http.StatusInternalServerError)
-				return
-			}
-
-			users = append(users, user)
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-
-		json.NewEncoder(w).Encode(users)
+	err := json.NewEncoder(w).Encode(users)
+	if err != nil {
+		fmt.Println("JSON encoding error:", err)
 	}
+}
+
+func CreateUsers(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json")
+	var user models.User
+
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	users = append(users, user)
+	w.WriteHeader(http.StatusCreated)
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		fmt.Println("JSON encoding error:", err)
+	}
+
 }
