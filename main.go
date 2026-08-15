@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -15,7 +16,9 @@ func main() {
 		fmt.Println("Databae Connection Error", err)
 		return
 	}
-	defer db.close()
+	defer db.Close(context.Background())
+
+	fmt.Println("Connected to PostgreSQL successfully")
 
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
