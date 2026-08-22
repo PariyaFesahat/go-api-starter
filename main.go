@@ -33,7 +33,7 @@ func main() {
 
 	http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
-			handlers.GetUser(w, r)
+			handlers.GetUser(w, r, db)
 			return
 		}
 		http.Error(w, "Method not alloed", http.StatusMethodNotAllowed)

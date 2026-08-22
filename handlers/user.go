@@ -12,23 +12,7 @@ import (
 	"github.com/pariyafesahat/go-rest-api/models"
 )
 
-var users = []models.User{
-	{
-		ID:    1,
-		Name:  "Alice",
-		Email: "alice@example.com",
-		Age:   25,
-	},
-	{
-		ID:    2,
-		Name:  "Bob",
-		Email: "bob@example.com",
-		Age:   30,
-	},
-}
-
-func GetUser(w http.ResponseWriter, r *http.Request) {
-
+func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	idString := strings.TrimPrefix(r.URL.Path, "/users/")
 
 	id, err := strconv.Atoi(idString)
@@ -37,17 +21,18 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, user := range users {
-		if user.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			err := json.NewEncoder(w).Encode(user)
-			if err != nil {
-				fmt.Println("JSON encoding error:", err)
-			}
-			return
-		}
+	user, err := database.GetUser(conn, id)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
 	}
-	http.Error(w, "User not found", http.StatusNotFound)
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(user)
+	if err != nil {
+		fmt.Println("JSON encoding error:", err)
+	}
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {

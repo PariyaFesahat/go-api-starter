@@ -21,6 +21,31 @@ func Connect() (*pgx.Conn, error) {
 	return conn, nil
 }
 
+func GetUser(conn *pgx.Conn, id int) (models.User, error) {
+	var user models.User
+
+	err := conn.QueryRow(
+		context.Background(),
+		`
+		SELECT id, name, email, age
+		FROM users
+		WHERE id = $1
+		`,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+		&user.Age,
+	)
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	return user, nil
+}
+
 func GetUsers(conn *pgx.Conn) ([]models.User, error) {
 	rows, err := conn.Query(context.Background(), `
 		SELECT id, name, email, age
