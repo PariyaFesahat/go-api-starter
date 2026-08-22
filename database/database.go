@@ -32,7 +32,7 @@ func GetUsers(conn *pgx.Conn) ([]models.User, error) {
 	}
 	defer rows.Close()
 
-	var users []models.User
+	users := make([]models.User, 0)
 
 	for rows.Next() {
 		var user models.User
@@ -55,4 +55,24 @@ func GetUsers(conn *pgx.Conn) ([]models.User, error) {
 	}
 
 	return users, nil
+}
+
+func CreateUser(conn *pgx.Conn, user models.User) (models.User, error) {
+	err := conn.QueryRow(
+		context.Background(),
+		`
+		INSERT INTO users (name, email, age)
+		VALUES ($1, $2, $3)
+		RETURNING id
+		`,
+		user.Name,
+		user.Email,
+		user.Age,
+	).Scan(&user.ID)
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	return user, nil
 }

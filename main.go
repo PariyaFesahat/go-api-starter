@@ -23,9 +23,9 @@ func main() {
 	http.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			handlers.GetUsers(w, r)
+			handlers.GetUsers(w, r, db)
 		case http.MethodPost:
-			handlers.CreateUsers(w, r)
+			handlers.CreateUser(w, r, db)
 		default:
 			http.Error(w, "Method not alloed", http.StatusMethodNotAllowed)
 		}

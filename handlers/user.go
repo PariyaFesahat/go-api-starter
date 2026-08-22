@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/pariyafesahat/go-rest-api/database"
 	"github.com/pariyafesahat/go-rest-api/models"
 )
 
@@ -15,7 +17,7 @@ var users = []models.User{
 		ID:    1,
 		Name:  "Alice",
 		Email: "alice@example.com",
-		Age:   22,
+		Age:   25,
 	},
 	{
 		ID:    2,
@@ -48,17 +50,22 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "User not found", http.StatusNotFound)
 }
 
-func GetUsers(w http.ResponseWriter, r *http.Request) {
+func GetUsers(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	users, err := database.GetUsers(conn)
+	if err != nil {
+		http.Error(w, "Failed to get users", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
-	err := json.NewEncoder(w).Encode(users)
+	err = json.NewEncoder(w).Encode(users)
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
 	}
 }
 
-func CreateUsers(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	var user models.User
 
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -67,11 +74,17 @@ func CreateUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users = append(users, user)
+	createdUser, err := database.CreateUser(conn, user)
+	if err != nil {
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	err = json.NewEncoder(w).Encode(user)
+
+	err = json.NewEncoder(w).Encode(createdUser)
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
 	}
-
 }
