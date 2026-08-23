@@ -7,15 +7,18 @@ import (
 
 	"github.com/pariyafesahat/go-rest-api/database"
 	"github.com/pariyafesahat/go-rest-api/handlers"
+	"github.com/pariyafesahat/go-rest-api/redis"
 )
 
 func main() {
-
 	db, err := database.Connect()
 	if err != nil {
-		fmt.Println("Databae Connection Error", err)
+		fmt.Println("Database Connection Error", err)
 		return
 	}
+
+	redis.Connect()
+
 	defer db.Close(context.Background())
 
 	fmt.Println("Connected to PostgreSQL successfully")
