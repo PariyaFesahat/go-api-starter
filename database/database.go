@@ -130,3 +130,23 @@ func UpdateUser(conn *pgx.Conn, id int, user models.User) (models.User, error) {
 
 	return updatedUser, nil
 }
+
+func DeleteUser(conn *pgx.Conn, id int) error {
+	commandTag, err := conn.Exec(
+		context.Background(),
+		`
+		DELETE FROM users
+		WHERE id = $1
+		`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete user: %w", err)
+	}
+
+	if commandTag.RowsAffected() == 0 {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
