@@ -73,3 +73,34 @@ func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		fmt.Println("JSON encoding error:", err)
 	}
 }
+
+func UpdateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	idString := strings.TrimPrefix(r.URL.Path, "/users/")
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	var user models.User
+
+	err = json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	updatedUser, err := database.UpdateUser(conn, id, user)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(updatedUser)
+	if err != nil {
+		fmt.Println("JSON encoding error:", err)
+	}
+}

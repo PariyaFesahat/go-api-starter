@@ -32,11 +32,14 @@ func main() {
 	})
 
 	http.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			handlers.GetUser(w, r, db)
-			return
+		case http.MethodPut:
+			handlers.UpdateUser(w, r, db)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-		http.Error(w, "Method not alloed", http.StatusMethodNotAllowed)
 	})
 
 	fmt.Println("Server running on http://localhost:8080")

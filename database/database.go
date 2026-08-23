@@ -101,3 +101,32 @@ func CreateUser(conn *pgx.Conn, user models.User) (models.User, error) {
 
 	return user, nil
 }
+
+func UpdateUser(conn *pgx.Conn, id int, user models.User) (models.User, error) {
+	var updatedUser models.User
+
+	err := conn.QueryRow(
+		context.Background(),
+		`
+		UPDATE users
+		SET name = $1, email = $2, age = $3
+		WHERE id = $4
+		RETURNING id, name, email, age
+		`,
+		user.Name,
+		user.Email,
+		user.Age,
+		id,
+	).Scan(
+		&updatedUser.ID,
+		&updatedUser.Name,
+		&updatedUser.Email,
+		&updatedUser.Age,
+	)
+
+	if err != nil {
+		return models.User{}, fmt.Errorf("failed to update user: %w", err)
+	}
+
+	return updatedUser, nil
+}
