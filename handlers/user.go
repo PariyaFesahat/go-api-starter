@@ -14,6 +14,7 @@ import (
 	"github.com/pariyafesahat/go-rest-api/redis"
 )
 
+#get users using redis cache
 func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	idString := strings.TrimPrefix(r.URL.Path, "/users/")
 
