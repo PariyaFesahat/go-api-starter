@@ -131,6 +131,13 @@ func UpdateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("user:%d", id)
+
+	err = redis.Delete(cacheKey)
+	if err != nil {
+		fmt.Println("Redis cache delete error:", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 
 	err = json.NewEncoder(w).Encode(updatedUser)
@@ -152,6 +159,13 @@ func DeleteUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
+	}
+
+	cacheKey := fmt.Sprintf("user:%d", id)
+
+	err = redis.Delete(cacheKey)
+	if err != nil {
+		fmt.Println("Redis cache delete error:", err)
 	}
 
 	w.WriteHeader(http.StatusNoContent)
