@@ -14,7 +14,6 @@ import (
 	"github.com/pariyafesahat/go-rest-api/redis"
 )
 
-#get users using redis cache
 func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	idString := strings.TrimPrefix(r.URL.Path, "/users/")
 
@@ -71,10 +70,45 @@ func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 }
 
 func GetUsers(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
+	cacheKey := "users:all"
+
+	// Try Redis first.
+	cachedUsers, err := redis.Get(cacheKey)
+	if err == nil {
+		var users []models.User
+
+		err = json.Unmarshal([]byte(cachedUsers), &users)
+		if err == nil {
+			fmt.Println("Users cache hit")
+
+			w.Header().Set("Content-Type", "application/json")
+
+			err = json.NewEncoder(w).Encode(users)
+			if err != nil {
+				fmt.Println("JSON encoding error:", err)
+			}
+			return
+		}
+	}
+
+	fmt.Println("Users cache miss")
+
+	// Cache miss: get users from PostgreSQL.
 	users, err := database.GetUsers(conn)
 	if err != nil {
 		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return
+	}
+
+	// Convert users to JSON and store in Redis for 5 minutes.
+	usersJSON, err := json.Marshal(users)
+	if err != nil {
+		fmt.Println("JSON encoding error:", err)
+	} else {
+		err = redis.Set(cacheKey, string(usersJSON), 5*time.Minute)
+		if err != nil {
+			fmt.Println("Redis cache error:", err)
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
