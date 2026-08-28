@@ -14,6 +14,13 @@ import (
 	"github.com/pariyafesahat/go-rest-api/redis"
 )
 
+func invalidateUsersCache() {
+	err := redis.Delete("users:all")
+	if err != nil {
+		fmt.Println("Redis users cache delete error:", err)
+	}
+}
+
 func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 	idString := strings.TrimPrefix(r.URL.Path, "/users/")
 
@@ -25,7 +32,7 @@ func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 
 	cacheKey := fmt.Sprintf("user:%d", id)
 
-	// Try to get the user from Redis first.
+	// Try Redis first.
 	cachedUser, err := redis.Get(cacheKey)
 	if err == nil {
 		var user models.User
@@ -35,26 +42,28 @@ func GetUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 			fmt.Println("Cache hit")
 
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(user)
+			err = json.NewEncoder(w).Encode(user)
+			if err != nil {
+				fmt.Println("JSON encoding error:", err)
+			}
 			return
 		}
 	}
 
 	fmt.Println("Cache miss")
 
-	// If not in Redis, get the user from PostgreSQL.
+	// Cache miss: get the user from PostgreSQL.
 	user, err := database.GetUser(conn, id)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
 
-	// Convert the user to JSON before storing it in Redis.
+	// Store the user in Redis for 5 minutes.
 	userJSON, err := json.Marshal(user)
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
 	} else {
-		// Store the user in Redis for 5 minutes.
 		err = redis.Set(cacheKey, string(userJSON), 5*time.Minute)
 		if err != nil {
 			fmt.Println("Redis cache error:", err)
@@ -82,7 +91,6 @@ func GetUsers(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 			fmt.Println("Users cache hit")
 
 			w.Header().Set("Content-Type", "application/json")
-
 			err = json.NewEncoder(w).Encode(users)
 			if err != nil {
 				fmt.Println("JSON encoding error:", err)
@@ -100,7 +108,7 @@ func GetUsers(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
-	// Convert users to JSON and store in Redis for 5 minutes.
+	// Store users in Redis for 5 minutes.
 	usersJSON, err := json.Marshal(users)
 	if err != nil {
 		fmt.Println("JSON encoding error:", err)
@@ -134,6 +142,9 @@ func CreateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
+	// A new user changes the full users list.
+	invalidateUsersCache()
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
@@ -166,12 +177,16 @@ func UpdateUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
+	// Remove the individual user's cached data.
 	cacheKey := fmt.Sprintf("user:%d", id)
 
 	err = redis.Delete(cacheKey)
 	if err != nil {
 		fmt.Println("Redis cache delete error:", err)
 	}
+
+	// The updated user also affects the full users list.
+	invalidateUsersCache()
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -196,12 +211,16 @@ func DeleteUser(w http.ResponseWriter, r *http.Request, conn *pgx.Conn) {
 		return
 	}
 
+	// Remove the individual user's cached data.
 	cacheKey := fmt.Sprintf("user:%d", id)
 
 	err = redis.Delete(cacheKey)
 	if err != nil {
 		fmt.Println("Redis cache delete error:", err)
 	}
+
+	// A deleted user also changes the full users list.
+	invalidateUsersCache()
 
 	w.WriteHeader(http.StatusNoContent)
 }
