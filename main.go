@@ -1,5 +1,11 @@
 package main
 
+// @title Go REST API
+// @version 1.0
+// @description A REST API built with Go, PostgreSQL, Redis, and Docker.
+//
+// @host localhost:8080
+
 import (
 	"context"
 	"fmt"
